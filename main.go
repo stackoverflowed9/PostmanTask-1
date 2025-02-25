@@ -23,22 +23,28 @@ func main(){
 
 	sheetname := file.GetSheetName(0)
 
-	rows, err := file.GetRows(sheetname)
+	rows, err := file.Rows(sheetname)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer rows.Close()
 
-	//Checking if any of the cell in any row is blank
-	for row_index, row := range rows {
+	//Checking whether any of the cell in any row is
+	var row_id = 1
+	rows.Next()
+	for rows.Next() {
+		row, _ := rows.Columns()
 		var flag = false
+		
 		for _, cell := range row {
 			if strings.TrimSpace(cell) == "" {
 				flag = true
 				break
 			}
 		}
-		if !flag {
-			fmt.Printf("Row:%d, %v\n", row_index+1,row)
+		if !flag && len(row) != 0{
+			fmt.Printf("%d: %v\n", row_id, row)
+			row_id++
 		}
 	}
 }
