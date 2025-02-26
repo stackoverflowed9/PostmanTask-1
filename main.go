@@ -27,6 +27,45 @@ type Student struct {
 
 const tolerance = 0.0001
 
+func computeAverages(students []Student) {
+	var sumQuiz, sumMidSem, sumLabTest, sumWeeklyLabs, sumPreCompre, sumCompre, sumTotal float64
+	numStudents := float64(len(students))
+
+	if numStudents == 0 {
+		fmt.Println("No student data available.")
+		return
+	}
+
+	
+	for _, s := range students {
+		sumQuiz += s.Quiz
+		sumMidSem += s.MidSem
+		sumLabTest += s.LabTest
+		sumWeeklyLabs += s.WeeklyLabs
+		sumPreCompre += s.PreCompre
+		sumCompre += s.Compre
+		sumTotal += s.Total
+	}
+
+	avgQuiz := sumQuiz / numStudents
+	avgMidSem := sumMidSem / numStudents
+	avgLabTest := sumLabTest / numStudents
+	avgWeeklyLabs := sumWeeklyLabs / numStudents
+	avgPreCompre := sumPreCompre / numStudents
+	avgCompre := sumCompre / numStudents
+	avgTotal := sumTotal / numStudents
+
+	fmt.Println("\n ||General Averages||")
+	fmt.Printf("Quiz Average: %.2f\n", avgQuiz)
+	fmt.Printf("Mid-Sem Average: %.2f\n", avgMidSem)
+	fmt.Printf("Lab Test Average: %.2f\n", avgLabTest)
+	fmt.Printf("Weekly Labs Average: %.2f\n", avgWeeklyLabs)
+	fmt.Printf("Pre-Compre Average: %.2f\n", avgPreCompre)
+	fmt.Printf("Compre Average: %.2f\n", avgCompre)
+	fmt.Printf("Overall Total Average: %.2f\n", avgTotal)
+}
+
+
 func main(){
 	file_path := os.Args[1]
 	
@@ -67,7 +106,7 @@ func main(){
 		
 
 		var computedSum float64 = quiz + midSem + labTest + weeklyLabs + compre
-		fmt.Printf("%f\n", computedSum)
+		
 		student := Student{
 			ClassNo: classno,
 			EmplID: row[1],
@@ -90,7 +129,5 @@ func main(){
 
 	}
 
-	for _, s := range students{
-		fmt.Printf("%+v\n", s)
-	}
+	computeAverages(students)
 }
