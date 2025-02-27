@@ -1,12 +1,15 @@
 package main
 
 import (
-	//"fmt"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strconv"
-	"math"
+	"strings"
+	"sort"
+	//"sync"
+
 	"github.com/xuri/excelize/v2"
 )
 
@@ -27,7 +30,7 @@ type Student struct {
 
 const tolerance = 0.0001
 
-func computeAverages(students []Student) {
+func general_averages(students []Student) {
 	var sumQuiz, sumMidSem, sumLabTest, sumWeeklyLabs, sumPreCompre, sumCompre, sumTotal float64
 	numStudents := float64(len(students))
 
@@ -63,6 +66,94 @@ func computeAverages(students []Student) {
 	fmt.Printf("Pre-Compre Average: %.2f\n", avgPreCompre)
 	fmt.Printf("Compre Average: %.2f\n", avgCompre)
 	fmt.Printf("Overall Total Average: %.2f\n", avgTotal)
+}
+
+func getBranch(campusID string) string {
+	if len(campusID) < 6 {
+		return "Unknown"
+	}
+	return campusID[4:6]
+}
+
+func branch_averages(students []Student) {
+	branchSums := make(map[string]float64)
+	branchCounts := make(map[string]int)
+
+	for _, s := range students {
+		branch := getBranch(s.CampusID)
+		branchSums[branch] += s.Total
+		branchCounts[branch]++
+	}
+
+	fmt.Println("\n ||Branch-wise Averages||")
+	for branch, sumTotal := range branchSums {
+		count := float64(branchCounts[branch])
+		avgTotal := sumTotal / count
+		fmt.Printf("Branch %s: Average Total = %.2f (based on %d students)\n", branch, avgTotal, branchCounts[branch])
+	}
+}
+
+
+
+func getter(s Student, category string) float64 {
+	switch category {
+	case "Quiz":
+		return s.Quiz
+	case "MidSem":
+		return s.MidSem
+	case "LabTest":
+		return s.LabTest
+	case "WeeklyLabs":
+		return s.WeeklyLabs
+	case "PreCompre":
+		return s.PreCompre
+	case "Compre":
+		return s.Compre
+	case "Total":
+		return s.Total
+	}
+	return 0
+}
+
+func rankTop3(students []Student) {
+	scoreCategories := map[string][]Student{
+		"Quiz":        students,
+		"MidSem":      students,
+		"LabTest":     students,
+		"WeeklyLabs":  students,
+		"PreCompre":   students,
+		"Compre":      students,
+		"Total":       students,
+	}
+
+	fmt.Println("\n || Top 3 Students for Each Component ||")
+	for category, list := range scoreCategories {
+		
+		sort.SliceStable(list, func(i, j int) bool {
+			switch category {
+			case "Quiz":
+				return list[i].Quiz > list[j].Quiz
+			case "MidSem":
+				return list[i].MidSem > list[j].MidSem
+			case "LabTest":
+				return list[i].LabTest > list[j].LabTest
+			case "WeeklyLabs":
+				return list[i].WeeklyLabs > list[j].WeeklyLabs
+			case "PreCompre":
+				return list[i].PreCompre > list[j].PreCompre
+			case "Compre":
+				return list[i].Compre > list[j].Compre
+			case "Total":
+				return list[i].Total > list[j].Total
+			}
+			return false
+		})
+
+		fmt.Printf("\n ||%s Ranking||\n", category)
+		for i, student := range list[:min(3, len(list))] {
+			fmt.Printf("%d. EmplID: %s | Marks: %.2f\n", i+1, student.EmplID, getter(student, category))
+		}
+	}
 }
 
 
@@ -111,6 +202,7 @@ func main(){
 			ClassNo: classno,
 			EmplID: row[1],
 			Quiz: quiz,
+			CampusID: strings.TrimSpace(row[3]),
 			MidSem: midSem,
 			LabTest: labTest,
 			WeeklyLabs: weeklyLabs,
@@ -128,6 +220,7 @@ func main(){
 		row_id++
 
 	}
-
-	computeAverages(students)
+	general_averages(students)
+	branch_averages(students)
+	rankTop3(students)
 }
