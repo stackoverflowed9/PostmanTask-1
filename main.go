@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sort"
-	//"sync"
+	"sync"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -175,51 +175,59 @@ func main(){
 	}
 	defer rows.Close()
 
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
 	var students []Student
 	var row_id = 1
 	rows.Next()
 	for rows.Next() {
-		
 		row, _ := rows.Columns()
 		if len(row) == 0 {
 			continue
 		}
-		
-		classno, _ := strconv.Atoi(row[1])		
-		quiz, _ := strconv.ParseFloat(row[4], 32)
-		midSem, _ := strconv.ParseFloat(row[5], 32)
-		labTest, _ := strconv.ParseFloat(row[6], 32)
-		weeklyLabs, _ := strconv.ParseFloat(row[7], 32)
-		preCompre, _ := strconv.ParseFloat(row[8], 32)
-		compre, _ := strconv.ParseFloat(row[9], 32)
-		total, _ := strconv.ParseFloat(row[10], 32)
-		
+
+		wg.Add(1)
+		go func(rowData []string, rowNum int) {
+			defer wg.Done()
+
+			classNo, _ := strconv.Atoi(rowData[1])
+			quiz, _ := strconv.ParseFloat(rowData[4], 32)
+			midSem, _ := strconv.ParseFloat(rowData[5], 32)
+			labTest, _ := strconv.ParseFloat(rowData[6], 32)
+			weeklyLabs, _ := strconv.ParseFloat(rowData[7], 32)
+			preCompre, _ := strconv.ParseFloat(rowData[8], 32)
+			compre, _ := strconv.ParseFloat(rowData[9], 32)
+			total, _ := strconv.ParseFloat(rowData[10], 32)
+
+			computedSum := quiz + midSem + labTest + weeklyLabs + compre
+
+			student := Student{
+				ClassNo:     classNo,
+				EmplID:      rowData[1],
+				CampusID:    strings.TrimSpace(rowData[3]),
+				Quiz:        quiz,
+				MidSem:      midSem,
+				LabTest:     labTest,
+				WeeklyLabs:  weeklyLabs,
+				PreCompre:   preCompre,
+				Compre:      compre,
+				Total:       total,
+				ComputedSum: computedSum,
+			}
 		
 
-		var computedSum float64 = quiz + midSem + labTest + weeklyLabs + compre
-		
-		student := Student{
-			ClassNo: classno,
-			EmplID: row[1],
-			Quiz: quiz,
-			CampusID: strings.TrimSpace(row[3]),
-			MidSem: midSem,
-			LabTest: labTest,
-			WeeklyLabs: weeklyLabs,
-			PreCompre: preCompre,
-			Compre: compre,
-			Total: total,
-			ComputedSum: computedSum,
-		}
+			if math.Abs(computedSum-total) > tolerance {
+				log.Printf("!!! Error in row %d: Computed sum %.2f does not match given total %.2f\n", rowNum, computedSum, total)
+			}
 
-		if math.Abs(computedSum-total) > tolerance {
-			log.Printf("!!! Error in row %d: Computed sum %.2f does not match given total %.2f\n", row_id, computedSum, total)
-		}
-	
-		students = append(students, student)
+			mu.Lock()
+			students = append(students, student)
+			mu.Unlock()
+		}(row, row_id)
 		row_id++
-
 	}
+	wg.Wait()
 	general_averages(students)
 	branch_averages(students)
 	rankTop3(students)
